@@ -1,1 +1,1 @@
-[[/ddd]
+[[home|ddd]
