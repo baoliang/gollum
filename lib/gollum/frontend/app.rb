@@ -18,8 +18,7 @@ class String
   # _Header => header which causes errors
   def to_url
     return nil if self.nil?
-    return self if ['_Header', '_Footer', '_Sidebar'].include? self
-    upstream_to_url
+    return self
   end
 end
 
@@ -145,15 +144,18 @@ module Precious
 
     post '/edit/*' do
       path      = '/' + clean_url(sanitize_empty_params(params[:path])).to_s
-      page_name = CGI.unescape(params[:page])
+      page_name = CGI.unescape(params[:page]).force_encoding('UTF-8')
       wiki      = wiki_new
       page      = wiki.paged(page_name, path, exact = true)
       return if page.nil?
       rename    = params[:rename].to_url if params[:rename]
-      name      = rename || page.name
-      committer = Gollum::Committer.new(wiki, commit_message)
-      commit    = {:committer => committer}
 
+      name      = rename || page.name
+      commit_message
+      committer = Gollum::Committer.new(wiki, commit_message)
+
+
+      commit    = {:committer => committer}
       update_wiki_page(wiki, page, params[:content], commit, name, params[:format])
       update_wiki_page(wiki, page.header,  params[:header],  commit) if params[:header]
       update_wiki_page(wiki, page.footer,  params[:footer],  commit) if params[:footer]
@@ -161,7 +163,6 @@ module Precious
       committer.commit
 
       page = wiki.page(rename) if rename
-
       redirect to("/#{page.escaped_url_path}") unless page.nil?
     end
 
@@ -385,7 +386,7 @@ module Precious
     # message is sourced from the incoming request parameters
     # author details are sourced from the session, to be populated by rack middleware ahead of us
     def commit_message
-      commit_message = { :message => params[:message] }
+      commit_message = { :message => params[:message].force_encoding("UTF-8") }
       author_parameters = session['gollum.author']
       commit_message.merge! author_parameters unless author_parameters.nil?
       commit_message
